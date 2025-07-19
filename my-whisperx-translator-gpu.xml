@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>WhisperX Subtitle Translator</Name>
+  <Repository>whisperx-translator-gpu</Repository>
+  <Registry>https://github.com/AGo444/whisperx-translator</Registry>
+  <Version>1.0</Version>
+  <Branch>main</Branch>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Memory>8192</Memory>
+  <MemorySwap>12288</MemorySwap>
+  <Support>https://github.com/AGo444/whisperx-translator/issues</Support>
+  <ProjectPage>https://github.com/AGo444/whisperx-translator</ProjectPage>
+  <Overview>
+    A Dockerized Python script to generate and translate subtitles using WhisperX (large-v3) for transcription and Hugging Face MarianMT for translation, optimized for Unraid with GPU support.
+  </Overview>
+  <Category>MediaServer:Tools:Utilities</Category>
+  <WebUI></WebUI>
+  <Icon>https://raw.githubusercontent.com/AGo444/whisperx-translator/master/icon.png</Icon>
+  <ExtraParams>--gpus all</ExtraParams>
+  <PostArguments>--language=$LANGUAGE</PostArguments>
+  <DonateText>If you find this useful, consider starring the GitHub repo!</DonateText>
+  <DonateLink>https://github.com/AGo444/whisperx-translator</DonateLink>
+
+  <!-- Instelbare inputmap als Path-type -->
+  <Config>
+    <ConfigType>Path</ConfigType>
+    <Name>Input Path</Name>
+    <Target>/data</Target>
+    <Default>/mnt/user/YourVideoShare/</Default>
+    <Description>Pad op Unraid waar je video's staan. SRT-bestanden worden hier opgeslagen.</Description>
+    <Required>true</Required>
+  </Config>
+
+  <!-- Taalkeuze als environment variabele -->
+  <Config>
+    <ConfigType>Variable</ConfigType>
+    <Name>Language</Name>
+    <Key>LANGUAGE</Key>
+    <Default>nl</Default>
+    <Mode>list</Mode>
+    <Value>nl</Value>
+    <Value>de</Value>
+    <Value>fr</Value>
+    <Value>es</Value>
+    <Value>it</Value>
+    <Description>Selecteer de doeltaal voor de ondertiteling</Description>
+    <Required>true</Required>
+  </Config>
+
+  <Config>
+    <ConfigType>Variable</ConfigType>
+    <Name>NVIDIA_VISIBLE_DEVICES</Name>
+    <Key>NVIDIA_VISIBLE_DEVICES</Key>
+    <Default>all</Default>
+    <Description>GPU devices zichtbaar voor container (all/0,1,etc)</Description>
+    <Required>true</Required>
+  </Config>
+
+  <HealthCheck>
+    <Test>python3 -c "import torch; print('GPU available:', torch.cuda.is_available())" || exit 1</Test>
+    <Interval>30s</Interval>
+    <Timeout>10s</Timeout>
+    <Retries>3</Retries>
+    <StartPeriod>5s</StartPeriod>
+  </HealthCheck>
+</Container>

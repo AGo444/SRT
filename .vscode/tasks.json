@@ -1,0 +1,14 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "docker-build-dev",
+            "type": "shell",
+            "command": "docker build -f Dockerfile.dev -t whisperx-translator-dev:latest .",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
