@@ -1,26 +1,26 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>WhisperX Subtitle Translator</Name>
-  <Repository>whisperx-translator-gpu</Repository>
-  <Registry>https://github.com/AGo444/whisperx-translator</Registry>
-  <Version>1.1</Version>
+  <Name>WhisperX Subtitle Creator and Translator</Name>
+  <Repository>agoddrie/whisperx-translator</Repository>
+  <Registry>https://hub.docker.com/r/agoddrie/whisperx-translator</Registry>
+  <Version>1.2</Version>
   <Branch>main</Branch>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
   <Memory>8192</Memory>
   <MemorySwap>12288</MemorySwap>
-  <Support>https://github.com/AGo444/whisperx-translator/issues</Support>
-  <ProjectPage>https://github.com/AGo444/whisperx-translator</ProjectPage>
+  <Support>https://github.com/AGo444/SRT/issues</Support>
+  <ProjectPage>https://github.com/AGo444/SRT</ProjectPage>
   <Overview>
-    A Dockerized Python script to generate and translate subtitles using WhisperX (large-v3) for transcription and Hugging Face MarianMT for translation, optimized for Unraid with GPU support.
+    A Dockerized Python script to generate and translate subtitles using WhisperX (large-v3) for transcription and Hugging Face MarianMT for translation, optimized for Unraid with CPU and GPU (nvidia) support.
   </Overview>
   <Category>MediaServer:Tools:Utilities</Category>
   <WebUI></WebUI>
-  <Icon>https://raw.githubusercontent.com/AGo444/whisperx-translator/master/icon.png</Icon>
+  <Icon>https://raw.githubusercontent.com/AGo444/SRT/master/icon.png</Icon>
   <ExtraParams>--gpus all</ExtraParams>
   <PostArguments>--language=$LANGUAGE</PostArguments>
   <DonateText>If you find this useful, consider starring the GitHub repo!</DonateText>
-  <DonateLink>https://github.com/AGo444/whisperx-translator</DonateLink>
+  <DonateLink>https://github.com/AGo444/SRT</DonateLink>
 
   <!-- Base Configuration -->
   <Config>
