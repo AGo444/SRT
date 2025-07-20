@@ -4,126 +4,79 @@
   <Repository>agoddrie/whisperx-translator</Repository>
   <Registry>https://hub.docker.com/r/agoddrie/whisperx-translator</Registry>
   <Version>1.2</Version>
+  <Platform>linux/amd64,linux/arm64</Platform>
   <Branch>main</Branch>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
+  <WebUI></WebUI>
+  <Shell>sh</Shell>
+  
+  <Beta>false</Beta>
+  <Project>https://github.com/AGo444/SRT</Project>
+  <Support>https://github.com/AGo444/SRT/issues</Support>
+  <Icon>https://raw.githubusercontent.com/AGo444/SRT/master/icon.png</Icon>
+  <Category>Tools: MediaServer:Video</Category>
+  
+  <TemplateURL>https://raw.githubusercontent.com/AGo444/SRT/master/my-whisperx-translator-gpu.xml</TemplateURL>
+  <Networking>
+    <Mode>bridge</Mode>
+    <Dns1>8.8.8.8</Dns1>
+    <Dns2>8.8.4.4</Dns2>
+  </Networking>
+
+  <Config Name="Input Directory" Target="/data" Default="" Mode="rw" Description="Path to your video files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/YourVideoShare/</Config>
+
+  <Config Name="Target Language" Target="TARGET_LANGUAGE" Default="nl" Mode="list" Description="Select target language for subtitles" Type="Variable" Display="always" Required="true" Mask="false">nl|de|fr|es|it</Config>
+
+  <Config Name="WhisperX Model" Target="WHISPERX_MODEL" Default="large-v3" Mode="list" Description="WhisperX model to use" Type="Variable" Display="always" Required="true" Mask="false">large-v3|large-v2|medium</Config>
+
+  <Config Name="Debug Mode" Target="DEBUG" Default="0" Mode="list" Description="Enable debug logging" Type="Variable" Display="advanced" Required="false" Mask="false">0|1</Config>
+
+  <Config Name="Use CUDA" Target="USE_CUDA" Default="1" Mode="list" Description="Enable CUDA GPU support" Type="Variable" Display="advanced" Required="false" Mask="false">0|1</Config>
+
+  <Config Name="Batch Size" Target="BATCH_SIZE" Default="8" Mode="integer" Description="Processing batch size (lower for less memory)" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="Python Unbuffered" Target="PYTHONUNBUFFERED" Default="1" Mode="integer" Description="Force Python output unbuffering" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="NVIDIA Visible Devices" Target="NVIDIA_VISIBLE_DEVICES" Default="all" Mode="string" Description="GPU devices to use (all/0,1,etc)" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <!-- Add GPU requirements -->
+  <ExtraParams>--runtime=nvidia --dns 8.8.8.8 --dns 8.8.4.4</ExtraParams>
+  <DonateText>If you find this container useful, consider supporting the project on GitHub</DonateText>
+  <DonateLink>https://github.com/AGo444/SRT</DonateLink>
+  <Description>WhisperX subtitle generator and translator with GPU support. Automatically creates English subtitles and translates them to your preferred language.</Description>
+  
+  <!-- Add memory limits -->
   <Memory>8192</Memory>
   <MemorySwap>12288</MemorySwap>
-  <Support>https://github.com/AGo444/SRT/issues</Support>
-  <ProjectPage>https://github.com/AGo444/SRT</ProjectPage>
-  <Overview>
-    A Dockerized Python script to generate and translate subtitles using WhisperX (large-v3) for transcription and Hugging Face MarianMT for translation, optimized for Unraid with CPU and GPU (nvidia) support.
-  </Overview>
-  <Category>MediaServer:Tools:Utilities</Category>
-  <WebUI></WebUI>
-  <Icon>https://raw.githubusercontent.com/AGo444/SRT/master/icon.png</Icon>
-  <ExtraParams>--gpus all</ExtraParams>
-  <PostArguments>--language=$LANGUAGE</PostArguments>
-  <DonateText>If you find this useful, consider starring the GitHub repo!</DonateText>
-  <DonateLink>https://github.com/AGo444/SRT</DonateLink>
 
-  <!-- Base Configuration -->
-  <Config>
-    <ConfigType>Path</ConfigType>
-    <Name>Input Directory</Name>
-    <Target>INPUT_DIR</Target>
-    <Default>/mnt/user/YourVideoShare/</Default>
-    <Description>Path to your video files. SRT files will be saved here.</Description>
-    <Required>true</Required>
-    <Mode>rw</Mode>
-  </Config>
-
-  <!-- Language Settings -->
-  <Config>
-    <ConfigType>Variable</ConfigType>
-    <Name>Target Language</Name>
-    <Target>TARGET_LANGUAGE</Target>
-    <Default>nl</Default>
-    <Mode>list</Mode>
-    <Value>nl</Value>
-    <Value>de</Value>
-    <Value>fr</Value>
-    <Value>es</Value>
-    <Value>it</Value>
-    <Description>Select target language for subtitles</Description>
-    <Required>true</Required>
-  </Config>
-
-  <!-- Model Settings -->
-  <Config>
-    <ConfigType>Variable</ConfigType>
-    <Name>WhisperX Model</Name>
-    <Target>WHISPERX_MODEL</Target>
-    <Default>large-v3</Default>
-    <Mode>list</Mode>
-    <Value>large-v3</Value>
-    <Value>large-v2</Value>
-    <Value>medium</Value>
-    <Description>WhisperX model to use for transcription</Description>
-    <Required>true</Required>
-  </Config>
-
-  <!-- GPU Settings -->
-  <Config>
-    <ConfigType>Variable</ConfigType>
-    <Name>NVIDIA_VISIBLE_DEVICES</Name>
-    <Target>NVIDIA_VISIBLE_DEVICES</Target>
-    <Default>all</Default>
-    <Description>GPU devices visible to container (all/0,1,etc)</Description>
-    <Required>true</Required>
-  </Config>
-
-  <Config>
-    <ConfigType>Variable</ConfigType>
-    <Name>USE_CUDA</Name>
-    <Target>USE_CUDA</Target>
-    <Default>1</Default>
-    <Mode>list</Mode>
-    <Value>1</Value>
-    <Value>0</Value>
-    <Description>Enable/Disable CUDA GPU support</Description>
-    <Required>true</Required>
-  </Config>
-
-  <!-- Performance Settings -->
-  <Config>
-    <ConfigType>Variable</ConfigType>
-    <Name>BATCH_SIZE</Name>
-    <Target>BATCH_SIZE</Target>
-    <Default>8</Default>
-    <Description>Batch size for processing (lower for less memory usage)</Description>
-    <Required>false</Required>
-  </Config>
-
-  <!-- Debug Settings -->
-  <Config>
-    <ConfigType>Variable</ConfigType>
-    <Name>DEBUG</Name>
-    <Target>DEBUG</Target>
-    <Default>0</Default>
-    <Mode>list</Mode>
-    <Value>0</Value>
-    <Value>1</Value>
-    <Description>Enable debug logging</Description>
-    <Required>false</Required>
-  </Config>
-
-  <!-- Python Settings -->
-  <Config>
-    <ConfigType>Variable</ConfigType>
-    <Name>PYTHONUNBUFFERED</Name>
-    <Target>PYTHONUNBUFFERED</Target>
-    <Default>1</Default>
-    <Description>Force Python to run unbuffered</Description>
-    <Required>false</Required>
-  </Config>
-
-  <!-- Health Check Configuration -->
+  <!-- Add health check -->
   <HealthCheck>
-    <Test>python3 -c "import torch; print('GPU available:', torch.cuda.is_available())" || exit 1</Test>
+    <Test>["CMD-SHELL", "python3 -c 'import torch; print(\"GPU available:\", torch.cuda.is_available())' || exit 1"]</Test>
     <Interval>30s</Interval>
     <Timeout>10s</Timeout>
     <Retries>3</Retries>
     <StartPeriod>5s</StartPeriod>
   </HealthCheck>
+
+  <!-- Add extra environment variables -->
+  <Config Name="Cache Directory" Target="CACHE_DIR" Default="/config/cache" Mode="rw" Description="Cache directory for models" Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/appdata/whisperx/cache</Config>
+
+  <Config Name="Max Memory" Target="MAX_MEMORY" Default="8192" Mode="integer" Description="Maximum memory usage in MB" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="Num Threads" Target="NUM_THREADS" Default="4" Mode="integer" Description="Number of CPU threads to use" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Data>
+    <Volume>
+      <HostDir>/mnt/user/YourVideoShare/</HostDir>
+      <ContainerDir>/data</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+    <!-- Add additional volume for cache -->
+    <Volume>
+      <HostDir>/mnt/user/appdata/whisperx/cache</HostDir>
+      <ContainerDir>/config/cache</ContainerDir>
+      <Mode>rw</Mode>
+    </Volume>
+  </Data>
 </Container>
