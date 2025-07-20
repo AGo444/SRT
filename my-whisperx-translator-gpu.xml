@@ -3,7 +3,7 @@
   <Name>WhisperX Subtitle Translator</Name>
   <Repository>whisperx-translator-gpu</Repository>
   <Registry>https://github.com/AGo444/whisperx-translator</Registry>
-  <Version>1.0</Version>
+  <Version>1.1</Version>
   <Branch>main</Branch>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
@@ -22,21 +22,22 @@
   <DonateText>If you find this useful, consider starring the GitHub repo!</DonateText>
   <DonateLink>https://github.com/AGo444/whisperx-translator</DonateLink>
 
-  <!-- Instelbare inputmap als Path-type -->
+  <!-- Base Configuration -->
   <Config>
     <ConfigType>Path</ConfigType>
-    <Name>Input Path</Name>
-    <Target>/data</Target>
+    <Name>Input Directory</Name>
+    <Target>INPUT_DIR</Target>
     <Default>/mnt/user/YourVideoShare/</Default>
-    <Description>Pad op Unraid waar je video's staan. SRT-bestanden worden hier opgeslagen.</Description>
+    <Description>Path to your video files. SRT files will be saved here.</Description>
     <Required>true</Required>
+    <Mode>rw</Mode>
   </Config>
 
-  <!-- Taalkeuze als environment variabele -->
+  <!-- Language Settings -->
   <Config>
     <ConfigType>Variable</ConfigType>
-    <Name>Language</Name>
-    <Key>LANGUAGE</Key>
+    <Name>Target Language</Name>
+    <Target>TARGET_LANGUAGE</Target>
     <Default>nl</Default>
     <Mode>list</Mode>
     <Value>nl</Value>
@@ -44,19 +45,80 @@
     <Value>fr</Value>
     <Value>es</Value>
     <Value>it</Value>
-    <Description>Selecteer de doeltaal voor de ondertiteling</Description>
+    <Description>Select target language for subtitles</Description>
+    <Required>true</Required>
+  </Config>
+
+  <!-- Model Settings -->
+  <Config>
+    <ConfigType>Variable</ConfigType>
+    <Name>WhisperX Model</Name>
+    <Target>WHISPERX_MODEL</Target>
+    <Default>large-v3</Default>
+    <Mode>list</Mode>
+    <Value>large-v3</Value>
+    <Value>large-v2</Value>
+    <Value>medium</Value>
+    <Description>WhisperX model to use for transcription</Description>
+    <Required>true</Required>
+  </Config>
+
+  <!-- GPU Settings -->
+  <Config>
+    <ConfigType>Variable</ConfigType>
+    <Name>NVIDIA_VISIBLE_DEVICES</Name>
+    <Target>NVIDIA_VISIBLE_DEVICES</Target>
+    <Default>all</Default>
+    <Description>GPU devices visible to container (all/0,1,etc)</Description>
     <Required>true</Required>
   </Config>
 
   <Config>
     <ConfigType>Variable</ConfigType>
-    <Name>NVIDIA_VISIBLE_DEVICES</Name>
-    <Key>NVIDIA_VISIBLE_DEVICES</Key>
-    <Default>all</Default>
-    <Description>GPU devices zichtbaar voor container (all/0,1,etc)</Description>
+    <Name>USE_CUDA</Name>
+    <Target>USE_CUDA</Target>
+    <Default>1</Default>
+    <Mode>list</Mode>
+    <Value>1</Value>
+    <Value>0</Value>
+    <Description>Enable/Disable CUDA GPU support</Description>
     <Required>true</Required>
   </Config>
 
+  <!-- Performance Settings -->
+  <Config>
+    <ConfigType>Variable</ConfigType>
+    <Name>BATCH_SIZE</Name>
+    <Target>BATCH_SIZE</Target>
+    <Default>8</Default>
+    <Description>Batch size for processing (lower for less memory usage)</Description>
+    <Required>false</Required>
+  </Config>
+
+  <!-- Debug Settings -->
+  <Config>
+    <ConfigType>Variable</ConfigType>
+    <Name>DEBUG</Name>
+    <Target>DEBUG</Target>
+    <Default>0</Default>
+    <Mode>list</Mode>
+    <Value>0</Value>
+    <Value>1</Value>
+    <Description>Enable debug logging</Description>
+    <Required>false</Required>
+  </Config>
+
+  <!-- Python Settings -->
+  <Config>
+    <ConfigType>Variable</ConfigType>
+    <Name>PYTHONUNBUFFERED</Name>
+    <Target>PYTHONUNBUFFERED</Target>
+    <Default>1</Default>
+    <Description>Force Python to run unbuffered</Description>
+    <Required>false</Required>
+  </Config>
+
+  <!-- Health Check Configuration -->
   <HealthCheck>
     <Test>python3 -c "import torch; print('GPU available:', torch.cuda.is_available())" || exit 1</Test>
     <Interval>30s</Interval>
