@@ -1,71 +1,73 @@
-# Stage 1: GPU-accelerated ffmpeg met NVENC/NVDEC
+# Stage 1: GPU-accelerated ffmpeg
 FROM jrottenberg/ffmpeg:6.0-nvidia AS ffmpeg-nv
 
-# Stage 2: PyTorch + WhisperX omgeving
-FROM nvcr.io/nvidia/pytorch:25.04-py3
-LABEL com.nvidia.volumes.needed="nvidia_driver"
+# Stage 2: PyTorch + WhisperX environment
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
-# Werkdirectory
+# Set working directory and create user
 WORKDIR /app
+RUN groupadd -r appgroup && useradd -r -g appgroup -m appuser && \
+    mkdir -p /data && \
+    chown -R appuser:appgroup /app /data
 
-# Kopieer ffmpeg/ffprobe met GPU-acceleratie
+# Copy ffmpeg with GPU support
 COPY --from=ffmpeg-nv /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 COPY --from=ffmpeg-nv /usr/local/bin/ffprobe /usr/local/bin/ffprobe
 
-
-# Installeer systeemafhankelijkheden: ffmpeg voor video, git voor kloon, python3-pip, libcudnn voor GPU
+# Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     git \
     python3-pip \
-    libcudnn8 libcudnn8-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Installeer eerst requirements.txt voor betere cache-benutting
-COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Copy and install requirements
+COPY --chown=appuser:appgroup requirements.txt .
+RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    pip3 install --no-cache-dir debugpy==1.8.0
 
-# Kopieer applicatie bestanden als laatste
-COPY createSrt.py .
+# Copy application files
+COPY --chown=appuser:appgroup createSrt.py .
 
-# Geef aan dat /data de plek is waar de video's komen
-VOLUME /data
-
-# Zorg ervoor dat de uitvoerbuffer van Python direct wordt geflusht
-ENV PYTHONUNBUFFERED=1
-
-# Maak een non-root gebruiker aan
-RUN useradd -m -s /bin/bash appuser
+# Switch to non-root user
 USER appuser
 
-# Zorg dat /data schrijfbaar is voor appuser
-RUN mkdir -p /data && chown appuser:appuser /data
+# Volume and environment configuration
+VOLUME /data
+ENV PYTHONUNBUFFERED=1 \
+    NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility,video \
+    USE_CUDA=1
 
-# Expliciete CUDA configuratie
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES compute,utility,video
+# Create entrypoint script with proper variable handling
+COPY --chown=appuser:appgroup <<'EOF' /app/entrypoint.sh
+#!/bin/bash
+set -e
 
-# Voeg expliciete error handling toe voor GPU checks
-RUN python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA niet beschikbaar!'"
+# Check if health check
+if [ "$1" = "--health-check" ]; then
+    python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA not available!'"
+    exit 0
+fi
 
-# Voeg environment variabelen toe voor betere taal ondersteuning
-ENV LANGUAGE_MODELS="Helsinki-NLP/opus-mt-en-nl Helsinki-NLP/opus-mt-en-de Helsinki-NLP/opus-mt-en-fr Helsinki-NLP/opus-mt-en-es Helsinki-NLP/opus-mt-en-it"
+# Check CUDA availability at runtime
+python3 -c "import torch; assert torch.cuda.is_available(), 'CUDA not available!'" || exit 1
 
-# Predownload modellen voor offline gebruik
-RUN python3 -c "from transformers import AutoTokenizer, AutoModelForSeq2SeqGeneration; \
-    for model in '$LANGUAGE_MODELS'.split(): \
-        AutoTokenizer.from_pretrained(model); \
-        AutoModelForSeq2SeqGeneration.from_pretrained(model)"
+# Start the application with all arguments
+if [ $# -eq 0 ]; then
+    exec python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client createSrt.py --language nl
+else
+    exec python3 -m debugpy --listen 0.0.0.0:5678 --wait-for-client createSrt.py "$@"
+fi
+EOF
 
-# Definieer de entrypoint van de container. Argumenten die aan 'docker run' worden meegegeven,
-# worden hierachter geplakt.
-ENTRYPOINT ["python3", "createSrt.py"]
+RUN chmod +x /app/entrypoint.sh
 
-# Standaard commando als er geen argumenten worden meegegeven.
-# Dit zal de standaardtaal "nl" gebruiken als argument voor het script.
-CMD ["--language", "nl"]
+# Update ENTRYPOINT and remove CMD since it's handled in script
+ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Voeg healthcheck toe
+# Update healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python3 -c "import torch; print('GPU available:', torch.cuda.is_available())" || exit 1
+    CMD ["/app/entrypoint.sh", "--health-check"]

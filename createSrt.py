@@ -10,10 +10,16 @@ import logging
 import time  # Voeg deze import toe aan het begin van het bestand
 
 # --- Configuration ---
-DEFAULT_TARGET_LANGUAGE = "nl"
-WHISPERX_MODEL = "large-v3"
+DEFAULT_TARGET_LANGUAGE = os.getenv('TARGET_LANGUAGE', 'nl')
+WHISPERX_MODEL = os.getenv('WHISPERX_MODEL', 'large-v3')
+BATCH_SIZE = int(os.getenv('BATCH_SIZE', '8'))
+DEBUG = os.getenv('DEBUG', '0') == '1'
+USE_CUDA = os.getenv('USE_CUDA', '1') == '1'
+DEVICE = "cuda" if USE_CUDA and torch.cuda.is_available() else "cpu"
+
+# Make INPUT_DIR configurable
+INPUT_DIR = os.getenv('INPUT_DIR', '/data')
 HF_TRANSLATE_MODEL = "Helsinki-NLP/opus-mt-en-nl"
-INPUT_DIR = "/data"
 SUPPORTED_LANGUAGES = ['nl', 'de', 'fr', 'es', 'it']  # Add all supported languages
 
 # Setup logging
@@ -38,6 +44,34 @@ def is_video_file(filepath):
 def get_target_language_prefix(target_language):
     """Returns the correct prefix for the Hugging Face translation model."""
     return f">>{target_language}<<"
+
+def split_long_text(text, max_length=100):
+    """Split text into smaller chunks at punctuation marks."""
+    if len(text) <= max_length:
+        return [text]
+    
+    # Try to split at these punctuation marks
+    split_chars = ['. ', '! ', '? ', '; ', ': ', ', ']
+    
+    for split_char in split_chars:
+        if split_char in text:
+            parts = text.split(split_char)
+            result = []
+            current_part = ""
+            
+            for part in parts:
+                if len(current_part + part + split_char) > max_length and current_part:
+                    result.append(current_part.strip())
+                    current_part = part + split_char
+                else:
+                    current_part += part + split_char
+            
+            if current_part:
+                result.append(current_part.strip())
+            return result
+    
+    # If no punctuation found, split at max_length
+    return [text[i:i+max_length] for i in range(0, len(text), max_length)]
 
 # Update de generate_subtitles functie
 def generate_subtitles(video_path, output_dir, target_language):
@@ -99,18 +133,47 @@ def generate_subtitles(video_path, output_dir, target_language):
         ]
         
         start_time = time.time()
-        print(f"⏱️ Started processing at {time.strftime('%H:%M:%S')}")
+        print(f"⏱️ Started processing at {time.strftime('%H:%M:%S')} using {DEVICE.upper()}")
         
         try:
-            process = subprocess.Popen(whisperx_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
+            process = subprocess.Popen(
+                whisperx_command, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True, 
+                bufsize=1, 
+                universal_newlines=True
+            )
+
+            # Add timeout check
+            max_silence = 300  # 5 minutes
+            last_output_time = time.time()
+
             for line in iter(process.stdout.readline, ''):
+                current_time = time.time()
                 sys.stdout.write(line)
                 sys.stdout.flush()
-                if "Processing:" in line:
-                    elapsed = time.time() - start_time
-                    print(f"⏳ Processing time so far: {int(elapsed//60)}m {int(elapsed%60)}s")
 
-            process.wait()
+                # Reset timer on any output
+                if line.strip():
+                    last_output_time = current_time
+
+                # Check for timeout
+                if current_time - last_output_time > max_silence:
+                    process.kill()
+                    print(f"\n❌ Process appears to be stuck (no output for {max_silence} seconds). Killing process...")
+                    return
+
+                if "Processing:" in line or "Performing alignment" in line:
+                    elapsed = current_time - start_time
+                    print(f"⏳ Processing time so far: {int(elapsed//60)}m {int(elapsed%60)}s")
+                
+                # Force garbage collection during long processes
+                if "Performing alignment" in line:
+                    gc.collect()
+                    torch.cuda.empty_cache() if DEVICE == "cuda" else None
+
+            process.wait(timeout=3600)  # 1 hour timeout
             if process.returncode == 0:
                 # Check if WhisperX created the file with a different name
                 potential_files = [f for f in os.listdir(output_dir) if f.startswith(base_name) and f.endswith('.srt')]
@@ -179,6 +242,11 @@ def translate_srt(input_srt_path, output_srt_path, target_language):
         from transformers import pipeline
         translator = pipeline("translation", model=model_name, device=-1 if DEVICE == "cpu" else 0)
         print(f"✅ Hugging Face translation model loaded on {DEVICE}")
+        
+        # Add test translation to verify model
+        test_result = translator(">>nl<< This is a test sentence to check if model is working.")
+        print(f"🔍 Model test translation: {test_result[0]['translation_text']}")
+        
     except Exception as e:
         print(f"❌ Error loading translation model: {e}")
         raise
@@ -190,34 +258,47 @@ def translate_srt(input_srt_path, output_srt_path, target_language):
         raise
 
     translated_subs = pysrt.SubRipFile()
+    translated_texts = {}  # Initialize dictionary for translations
 
     lang_prefix = get_target_language_prefix(target_language)
-
     texts_to_translate = [f"{lang_prefix} {sub.text}" for sub in subs]
     
     # Kleinere batch size voor CPU
-    batch_size = 4 if DEVICE == "cpu" else 16
+    batch_size = 1 if DEVICE == "cpu" else 16
     for i in range(0, len(texts_to_translate), batch_size):
-        batch = texts_to_translate[i:i + batch_size]
-        print(f"➡️ Processing translation batch {i//batch_size + 1} of {len(texts_to_translate)//batch_size + 1}...")
-        try:
-            if not batch:
-                continue
+        batch = texts_to_translate[i:i+batch_size]
+        
+        # Split long sentences
+        split_batch = []
+        for text in batch:
+            if len(text) > 100:  # Split if longer than 100 characters
+                split_batch.extend(split_long_text(text))
+            else:
+                split_batch.append(text)
+        
+        translations = translator(split_batch)
+        
+        # Combine translations if needed
+        for j, translation in enumerate(translations):
+            translated_text = translation['translation_text']
+            if len(translated_text) > 100:
+                # Add line breaks for readability
+                translated_text = translated_text.replace('. ', '.\n')
+                translated_text = translated_text.replace('! ', '!\n')
+                translated_text = translated_text.replace('? ', '?\n')
             
-            translated_batch = translator(batch)
-            translated_texts = [item['translation_text'] for item in translated_batch]
-            
-            for j, sub_text in enumerate(translated_texts):
-                original_sub = subs[i+j]
-                new_sub = pysrt.SubRipItem(index=original_sub.index, start=original_sub.start, end=original_sub.end, text=sub_text)
-                translated_subs.append(new_sub)
-        except Exception as e:
-            print(f"❌ Error during translation batch processing (batch {i//batch_size + 1}): {e}")
-            raise
-        if DEVICE == "cuda":
-            torch.cuda.empty_cache()
-        gc.collect()
-
+            translated_texts[i+j] = translated_text
+    
+    # Create new subtitles with translations
+    for index, sub in enumerate(subs):
+        new_sub = pysrt.SubRipItem(
+            index=sub.index,
+            start=sub.start,
+            end=sub.end,
+            text=translated_texts[index]
+        )
+        translated_subs.append(new_sub)
+    
     translated_subs.save(output_srt_path, encoding='utf-8')
 
 # --- Device Configuration ---
