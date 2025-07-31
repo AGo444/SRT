@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>WhisperX v2.0 Beta - Subtitle Creator</Name>
+  <Repository>agoddrie/whisperx-translator:2.0-beta</Repository>
+  <Registry>https://hub.docker.com/r/agoddrie/whisperx-translator</Registry>
+  <Version>2.0.0-beta1</Version>
+  <Platform>linux/amd64</Platform>
+  <Branch>v2-beta</Branch>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <WebUI>http://[IP]:[PORT:8080]</WebUI>
+  <Shell>bash</Shell>
+  
+  <Beta>true</Beta>
+  <Project>https://github.com/AGo444/SRT</Project>
+  <Support>https://github.com/AGo444/SRT/issues</Support>
+  <Icon>https://raw.githubusercontent.com/AGo444/SRT/v2-beta/icon-96.png</Icon>
+  <Description>🧪 WhisperX v2.0 BETA - Next-gen subtitle creator with Web UI, auto-GPU detection, 50% smaller container. ⚠️ BETA SOFTWARE - Use v1.6.3 for production!</Description>
+  <Category>Tools: MediaServer:Video</Category>
+  
+  <TemplateURL>https://raw.githubusercontent.com/AGo444/SRT/v2-beta/my-whisperx-translator-gpu-v2-beta.xml</TemplateURL>
+  
+  <!-- BETA WARNING -->
+  <Config Name="⚠️ BETA ACKNOWLEDGMENT" Target="BETA_ACKNOWLEDGED" Default="0" Mode="list" Description="I understand this is BETA software" Type="Variable" Display="always" Required="true" Mask="false">0|1</Config>
+  
+  <!-- v2.0 NEW FEATURES -->
+  <Config Name="Web UI Port" Target="8080" Default="8080" Mode="tcp" Description="Web dashboard port" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  
+  <Config Name="Performance Preset" Target="PERFORMANCE_PRESET" Default="balanced" Mode="list" Description="NEW: Auto-configure performance vs accuracy" Type="Variable" Display="always" Required="true" Mask="false">speed|balanced|accuracy|ultra</Config>
+  
+  <Config Name="Auto GPU Config" Target="AUTO_GPU_CONFIG" Default="1" Mode="list" Description="NEW: Auto-detect and optimize for your GPU" Type="Variable" Display="always" Required="false" Mask="false">0|1</Config>
+  
+  <Config Name="Processing Mode" Target="PROCESSING_MODE" Default="batch" Mode="list" Description="NEW: Processing mode" Type="Variable" Display="always" Required="false" Mask="false">batch|watch|realtime</Config>
+  
+  <Config Name="Container Size" Target="CONTAINER_VARIANT" Default="standard" Mode="list" Description="NEW: Container size optimization" Type="Variable" Display="always" Required="false" Mask="false">minimal|standard|full</Config>
+  
+  <!-- STANDARD SETTINGS (from v1.6.3) -->
+  <Config Name="Input Directory" Target="/data" Default="" Mode="rw" Description="Path to your video files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/YourVideoShare/</Config>
+  
+  <Config Name="Cache Directory" Target="/config/cache" Default="" Mode="rw" Description="Cache directory for models" Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/whisperx/cache</Config>
+  
+  <Config Name="Target Language" Target="TARGET_LANGUAGE" Default="nl" Mode="list" Description="Target language for translation" Type="Variable" Display="always" Required="true" Mask="false">nl|de|fr|es|it|pt|ru|ja|ko|zh|ar|hi|tr</Config>
+  
+  <!-- BACKWARD COMPATIBILITY -->
+  <Config Name="WhisperX Model" Target="WHISPERX_MODEL" Default="auto" Mode="list" Description="Model (auto = preset-based)" Type="Variable" Display="always" Required="false" Mask="false">auto|large-v3|large-v2|medium|small</Config>
+  
+  <Config Name="Debug Mode" Target="DEBUG" Default="0" Mode="list" Description="Enable debug logging" Type="Variable" Display="always" Required="false" Mask="false">0|1</Config>
+  
+  <!-- v2.0 ADVANCED FEATURES -->
+  <Config Name="Smart Batching" Target="SMART_BATCHING" Default="1" Mode="list" Description="NEW: Dynamic batch sizing" Type="Variable" Display="advanced" Required="false" Mask="false">0|1</Config>
+  
+  <Config Name="Source Language Detection" Target="AUTO_DETECT_LANGUAGE" Default="1" Mode="list" Description="NEW: Auto-detect source language" Type="Variable" Display="advanced" Required="false" Mask="false">0|1</Config>
+  
+  <Config Name="Speaker Diarization" Target="SPEAKER_DIARIZATION" Default="0" Mode="list" Description="NEW: Identify different speakers" Type="Variable" Display="advanced" Required="false" Mask="false">0|1</Config>
+  
+  <!-- REDUCED MEMORY for v2.0 -->
+  <Memory>8192</Memory>
+  <MemorySwap>12288</MemorySwap>
+  
+  <!-- GPU REQUIREMENTS -->
+  <Runtime>nvidia</Runtime>
+  <ExtraParams>--runtime=nvidia --gpus all --dns 8.8.8.8 --dns 8.8.4.4</ExtraParams>
+  
+</Container>
